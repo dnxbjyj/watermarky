@@ -1,6 +1,9 @@
 # watermarky
 一款图片加水印工具，是一个单HTML文件的SPA（Single Page Application，单页应用），纯本地化操作，没有任何上传和网络操作，代码全部开源，可完全审查。
 
+# 使用方法
+在任何操作系统平台（Windows、Mac、Linux等）的任何浏览器（Chrome、Firefox等）打开`watermarky.html`，即可立即开始使用。
+
 # 加水印效果
 
 原图：
