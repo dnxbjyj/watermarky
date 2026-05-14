@@ -19,7 +19,7 @@
 ![](./img/sample-output.png)
 
 # AI vibe coding prompt
-> 本应用的代码是借助AI大模型开发的，这里记录给大模型的提示词。
+> 本应用的代码是完全借助AI大模型开发的，这里记录给大模型的提示词。
 
 开发一款SPA应用：watermarky，实现的功能：可以对图片加文字水印。
 需求详细描述：
