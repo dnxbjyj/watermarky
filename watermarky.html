@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>watermarky</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            padding: 24px;
+            color: #333;
+        }
+        
+        .app-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .app-desc {
+            font-size: 14px;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 24px;
+            height: calc(100vh - 140px);
+            min-height: 600px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: auto;
+        }
+        
+        .preview-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .preview-container {
+            flex: 1;
+            position: relative;
+            background: #fafafa;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #eee;
+        }
+        
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .placeholder {
+            color: #aaa;
+            text-align: center;
+            font-size: 15px;
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        h2 {
+            font-size: 16px;
+            margin: 0 0 16px;
+            color: #444;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 24px;
+        }
+        
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #3498db;
+            background: #f8fafc;
+        }
+        
+        .upload-area p {
+            color: #777;
+            font-size: 14px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        input[type="color"] {
+            width: 100%;
+            height: 44px;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e8e8e8;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .value-display {
+            min-width: 50px;
+            text-align: right;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .export-btn {
+            width: 100%;
+            padding: 14px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: auto;
+            transition: background 0.3s;
+        }
+        
+        .export-btn:hover {
+            background: #2980b9;
+        }
+        
+        .export-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #27ae60;
+            min-height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-header">
+        <h1>watermarky</h1>
+        <p class="app-desc">一款简洁的图片水印工具，支持自定义文字水印并平铺到整张图片，保护您的图片版权。</p>
+    </div>
+    
+    <div class="container">
+        <div class="panel preview-panel">
+            <div class="preview-container">
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div class="placeholder" id="placeholder">
+                    图片预览区域<br>请上传图片或拖入图片
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel control-panel">
+            <div class="upload-area" id="uploadArea">
+                <p>点击选择图片或拖入图片到此处</p>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+            
+            <h2>水印内容</h2>
+            
+            <div class="control-group">
+                <label>水印文字</label>
+                <input type="text" id="watermarkText" value="仅用于本人办理XX用途，其他用途无效">
+            </div>
+            
+            <h2>外观设置</h2>
+            
+            <div class="control-group">
+                <label>字体</label>
+                <select id="fontFamily">
+                    <option value="Arial">Arial</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Microsoft YaHei">Microsoft YaHei</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>字号</label>
+                <div class="slider-container">
+                    <input type="range" id="fontSize" min="10" max="120" value="28">
+                    <span class="value-display" id="fontSizeValue">28</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>颜色</label>
+                <input type="color" id="fontColor" value="#000000">
+            </div>
+            
+            <div class="control-group">
+                <label>旋转角度</label>
+                <div class="slider-container">
+                    <input type="range" id="rotation" min="-180" max="180" value="-45">
+                    <span class="value-display" id="rotationValue">-45deg</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>行间距</label>
+                <div class="slider-container">
+                    <input type="range" id="lineSpacing" min="50" max="400" value="150">
+                    <span class="value-display" id="lineSpacingValue">150%</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>同行间距</label>
+                <div class="slider-container">
+                    <input type="range" id="colSpacing" min="50" max="400" value="120">
+                    <span class="value-display" id="colSpacingValue">120%</span>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>透明度</label>
+                <div class="slider-container">
+                    <input type="range" id="opacity" min="10" max="100" value="75">
+                    <span class="value-display" id="opacityValue">75%</span>
+                </div>
+            </div>
+            
+            <button class="export-btn" id="exportBtn" disabled>导出图片</button>
+            <div class="status" id="status"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var uploadArea = document.getElementById('uploadArea');
+            var fileInput = document.getElementById('fileInput');
+            var placeholder = document.getElementById('placeholder');
+            var exportBtn = document.getElementById('exportBtn');
+            var status = document.getElementById('status');
+            
+            var originalImage = null;
+            var imageLoaded = false;
+            
+            var controls = {
+                watermarkText: document.getElementById('watermarkText'),
+                fontFamily: document.getElementById('fontFamily'),
+                fontSize: document.getElementById('fontSize'),
+                fontSizeValue: document.getElementById('fontSizeValue'),
+                fontColor: document.getElementById('fontColor'),
+                rotation: document.getElementById('rotation'),
+                rotationValue: document.getElementById('rotationValue'),
+                lineSpacing: document.getElementById('lineSpacing'),
+                lineSpacingValue: document.getElementById('lineSpacingValue'),
+                colSpacing: document.getElementById('colSpacing'),
+                colSpacingValue: document.getElementById('colSpacingValue'),
+                opacity: document.getElementById('opacity'),
+                opacityValue: document.getElementById('opacityValue')
+            };
+            
+            function updateSliderValues() {
+                controls.fontSizeValue.textContent = controls.fontSize.value;
+                controls.rotationValue.textContent = controls.rotation.value + 'deg';
+                controls.lineSpacingValue.textContent = controls.lineSpacing.value + '%';
+                controls.colSpacingValue.textContent = controls.colSpacing.value + '%';
+                controls.opacityValue.textContent = controls.opacity.value + '%';
+            }
+            
+            function drawWatermark() {
+                if (!originalImage || !imageLoaded) return;
+                
+                canvas.width = originalImage.naturalWidth || originalImage.width;
+                canvas.height = originalImage.naturalHeight || originalImage.height;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+                
+                var text = controls.watermarkText.value.trim();
+                if (!text) {
+                    updatePreview();
+                    return;
+                }
+                
+                var fontSize = parseInt(controls.fontSize.value);
+                var fontFamily = controls.fontFamily.value;
+                var color = controls.fontColor.value;
+                var rotation = parseInt(controls.rotation.value) * Math.PI / 180;
+                var lineSpacingPercent = parseInt(controls.lineSpacing.value);
+                var colSpacingPercent = parseInt(controls.colSpacing.value);
+                var opacity = parseInt(controls.opacity.value) / 100;
+                
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = color;
+                ctx.font = fontSize + 'px ' + fontFamily;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                var textWidth = ctx.measureText(text).width;
+                var spacingY = fontSize * (lineSpacingPercent / 100);
+                var spacingX = textWidth * (colSpacingPercent / 100);
+                
+                var diagonal = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height) * 1.2;
+                
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(rotation);
+                
+                var cols = Math.ceil(diagonal / spacingX) + 2;
+                var rows = Math.ceil(diagonal / spacingY) + 2;
+                
+                for (var row = -rows/2; row < rows/2; row++) {
+                    for (var col = -cols/2; col < cols/2; col++) {
+                        var x = col * spacingX;
+                        var y = row * spacingY;
+                        ctx.fillText(text, x, y);
+                    }
+                }
+                
+                ctx.restore();
+                updatePreview();
+            }
+            
+            function updatePreview() {
+                if (!imageLoaded) return;
+                canvas.style.display = 'block';
+                placeholder.style.display = 'none';
+            }
+            
+            function loadImage(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var img = new Image();
+                    img.onload = function() {
+                        originalImage = img;
+                        imageLoaded = true;
+                        exportBtn.disabled = false;
+                        drawWatermark();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    loadImage(e.target.files[0]);
+                }
+            });
+            
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    loadImage(e.dataTransfer.files[0]);
+                }
+            });
+            
+            Object.values(controls).forEach(function(control) {
+                if (control.tagName === 'INPUT' || control.tagName === 'SELECT') {
+                    control.addEventListener('input', function() {
+                        updateSliderValues();
+                        drawWatermark();
+                    });
+                }
+            });
+            
+            exportBtn.addEventListener('click', function() {
+                if (!imageLoaded) return;
+                
+                var link = document.createElement('a');
+                link.download = 'watermarked_' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                status.textContent = '图片已导出';
+                setTimeout(function() { status.textContent = ''; }, 2000);
+            });
+            
+            updateSliderValues();
+        })();
+    </script>
+</body>
+</html>
